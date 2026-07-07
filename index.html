@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="style.css?v=8" />
+<link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
   <div class="app">
@@ -45,14 +45,16 @@
 
       <section class="card">
         <form id="guess-form" autocomplete="off">
-          <input
-            id="guess-input"
-            type="text"
-            list="player-list"
-            placeholder="Type a player name..."
-            required
-          />
-          <datalist id="player-list"></datalist>
+          <div class="guess-input-wrap">
+            <input
+              id="guess-input"
+              type="text"
+              placeholder="Type a player name..."
+              autocomplete="off"
+              required
+            />
+            <ul id="autocomplete-list" class="autocomplete-list" hidden></ul>
+          </div>
           <select id="season-select" class="season-select" hidden></select>
           <button type="submit">Guess</button>
         </form>
@@ -77,13 +79,13 @@
             <thead>
               <tr>
                 <th>Player</th>
-                <th>Year</th>
-                <th>Lg</th>
-                <th>Div</th>
-                <th>Team</th>
-                <th>Pos</th>
-                <th>Award</th>
-                <th>Debut</th>
+                <th title="Yellow = within 3 years of the answer">Year</th>
+                <th title="Exact match only (AL or NL)">Lg</th>
+                <th title="Yellow = same region (East/Central/West), different league">Div</th>
+                <th title="Exact match only">Team</th>
+                <th title="Yellow = same category as the answer (Infield / Outfield / Catcher / DH)">Pos</th>
+                <th title="Yellow = finished within 3 spots of the answer's actual voting rank">Award</th>
+                <th title="Yellow = debut year within 3 years of the answer's debut year">Debut</th>
               </tr>
             </thead>
             <tbody id="guess-grid-body"></tbody>
@@ -138,7 +140,8 @@
     </div>
   </div>
 
-  <script src="data.js?v=8"></script>
-  <script src="game.js?v=8"></script>
+  <script src="data.js?v=10"></script>
+  <script src="all_players.js?v=10"></script>
+  <script src="game.js?v=10"></script>
 </body>
 </html>

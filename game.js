@@ -1,9 +1,15 @@
 (async function () {
   const DATA = window.PLAYER_DATA;
+  // Every MLB player-season with real playing time, 2000-present — this is
+  // the guessable pool. Only DATA (top-10 finishers) is ever the *answer*;
+  // ALL_PLAYERS just lets you guess anyone and still get useful hints,
+  // showing "N/A" for award/rank on seasons that didn't crack the top 10.
+  const ALL_PLAYERS = window.ALL_PLAYERS || DATA;
   const STATS_API = "https://statsapi.mlb.com/api/v1";
   const MAX_GUESSES = 6;
   const EPOCH = new Date(2024, 0, 1); // day 0
   const STORAGE_PREFIX = "statline_";
+  const GAME_URL = "https://michaelmassey13.github.io/stat-line/";
   // Set this to your Formspree endpoint (e.g. "https://formspree.io/f/xxxxxxx")
   // to wire up the feedback form; left blank it falls back to a mailto: link.
   const FEEDBACK_ENDPOINT = "";
@@ -78,7 +84,7 @@
 
   // normalized player name -> all of that player's qualifying seasons, sorted
   const PLAYER_SEASONS = new Map();
-  DATA.forEach((d) => {
+  ALL_PLAYERS.forEach((d) => {
     const key = normalize(d.player);
     if (!PLAYER_SEASONS.has(key)) PLAYER_SEASONS.set(key, []);
     PLAYER_SEASONS.get(key).push(d);
@@ -205,7 +211,7 @@
     puzzleLabel: document.getElementById("puzzle-label"),
     guessForm: document.getElementById("guess-form"),
     guessInput: document.getElementById("guess-input"),
-    playerList: document.getElementById("player-list"),
+    autocompleteList: document.getElementById("autocomplete-list"),
     seasonSelect: document.getElementById("season-select"),
     seasonHint: document.getElementById("season-hint"),
     guessGridBody: document.getElementById("guess-grid-body"),
@@ -239,14 +245,39 @@
     closeFeedbackModal: document.getElementById("close-feedback-modal"),
   };
 
-  function uniquePlayerNames() {
-    return [...new Set(DATA.map((d) => d.player))].sort();
+  const UNIQUE_PLAYER_NAMES = [...new Set(ALL_PLAYERS.map((d) => d.player))].sort();
+
+  // ---------- autocomplete dropdown ----------
+  const MAX_SUGGESTIONS = 8;
+
+  function suggestionsFor(raw) {
+    const q = normalize(raw);
+    if (!q) return [];
+    const starts = [];
+    const contains = [];
+    for (const name of UNIQUE_PLAYER_NAMES) {
+      const n = normalize(name);
+      if (n.startsWith(q)) starts.push(name);
+      else if (n.includes(q)) contains.push(name);
+      if (starts.length >= MAX_SUGGESTIONS) break;
+    }
+    return starts.concat(contains).slice(0, MAX_SUGGESTIONS);
   }
 
-  function populateDatalist() {
-    els.playerList.innerHTML = uniquePlayerNames()
-      .map((n) => `<option value="${n}"></option>`)
-      .join("");
+  function renderAutocomplete() {
+    const matches = suggestionsFor(els.guessInput.value);
+    if (matches.length === 0) {
+      els.autocompleteList.hidden = true;
+      els.autocompleteList.innerHTML = "";
+      return;
+    }
+    els.autocompleteList.innerHTML = matches.map((n) => `<li>${n}</li>`).join("");
+    els.autocompleteList.hidden = false;
+  }
+
+  function hideAutocomplete() {
+    els.autocompleteList.hidden = true;
+    els.autocompleteList.innerHTML = "";
   }
 
   function renderStatLine() {
@@ -341,14 +372,39 @@
     return guessRegion === answerRegion ? "yellow" : "gray";
   }
 
-  function buildCells(entry) {
-    const year = compareClose(entry.year, answer.year, 3);
-    const debut = compareClose(entry.debutYear, answer.debutYear, 3);
+  const HINT_DESCRIPTIONS = {
+    year: "Yellow = within 3 years of the answer",
+    debut: "Yellow = debut year within 3 years of the answer's debut year",
+    league: "Exact match only (AL or NL)",
+    division: "Yellow = same region (East/Central/West), different league",
+    team: "Exact match only",
+    position: "Yellow = same category as the answer (Infield / Outfield / Catcher / DH)",
+    award: "Yellow = finished within 3 spots of the answer's actual voting rank",
+  };
+
+  // a guessed player-season that never cracked the top 10 has no rank to
+  // compare, so the Award hint is a plain "N/A" — no color, no arrow
+  function buildAwardCell(entry) {
+    if (entry.rank == null || entry.award == null) {
+      return { status: "gray", text: "N/A" };
+    }
     const rank = compareRank(entry.rank, answer.rank, 3);
     const awardLabel = entry.award === "Cy Young" ? "CY" : "MVP";
+    return { status: rank.status, text: `${awardLabel} #${entry.rank}${rank.arrow ? " " + rank.arrow : ""}` };
+  }
+
+  function buildCells(entry) {
+    const year = compareClose(entry.year, answer.year, 3);
+    const debutCell =
+      entry.debutYear == null
+        ? { status: "gray", text: "N/A" }
+        : (() => {
+            const d = compareClose(entry.debutYear, answer.debutYear, 3);
+            return { status: d.status, text: `${entry.debutYear}${d.arrow ? " " + d.arrow : ""}` };
+          })();
     return {
       year: { status: year.status, text: `${entry.year}${year.arrow ? " " + year.arrow : ""}` },
-      debut: { status: debut.status, text: `${entry.debutYear}${debut.arrow ? " " + debut.arrow : ""}` },
+      debut: debutCell,
       league: { status: compareExact(entry.league, answer.league), text: entry.league },
       division: {
         status: compareDivision(entry.division, answer.division),
@@ -356,29 +412,27 @@
       },
       team: { status: compareExact(entry.team, answer.team), text: entry.teamAbbr },
       position: { status: comparePosition(entry.position, answer.position), text: entry.position },
-      award: {
-        status: rank.status,
-        text: `${awardLabel} #${entry.rank}${rank.arrow ? " " + rank.arrow : ""}`,
-      },
+      award: buildAwardCell(entry),
     };
   }
 
-  function cellHtml(cell) {
-    return `<td class="cell ${cell.status}">${cell.text}</td>`;
+  function cellHtml(cell, category) {
+    const title = HINT_DESCRIPTIONS[category] ? ` title="${HINT_DESCRIPTIONS[category]}"` : "";
+    return `<td class="cell ${cell.status}"${title}>${cell.text}</td>`;
   }
 
   function renderGuessGrid() {
     els.guessGridBody.innerHTML = state.guesses
       .map(
         (g) => `<tr>
-          <td class="player-name">${g.name}</td>
-          ${cellHtml(g.cells.year)}
-          ${cellHtml(g.cells.league)}
-          ${cellHtml(g.cells.division)}
-          ${cellHtml(g.cells.team)}
-          ${cellHtml(g.cells.position)}
-          ${cellHtml(g.cells.award)}
-          ${cellHtml(g.cells.debut)}
+          <td class="player-name${g.playerMatch ? " player-match" : ""}">${g.name}</td>
+          ${cellHtml(g.cells.year, "year")}
+          ${cellHtml(g.cells.league, "league")}
+          ${cellHtml(g.cells.division, "division")}
+          ${cellHtml(g.cells.team, "team")}
+          ${cellHtml(g.cells.position, "position")}
+          ${cellHtml(g.cells.award, "award")}
+          ${cellHtml(g.cells.debut, "debut")}
         </tr>`
       )
       .join("");
@@ -447,7 +501,10 @@
     els.seasonSelect.innerHTML =
       `<option value="">Season…</option>` +
       seasons
-        .map((e) => `<option value="${e.year}">${e.year} (${e.award === "Cy Young" ? "CY" : "MVP"})</option>`)
+        .map((e) => {
+          const label = e.rank != null ? `${e.award === "Cy Young" ? "CY" : "MVP"} #${e.rank}` : "unranked";
+          return `<option value="${e.year}">${e.year} (${label})</option>`;
+        })
         .join("");
     els.seasonSelect.hidden = false;
     els.seasonHint.hidden = false;
@@ -461,7 +518,7 @@
     if (!guess) return false;
 
     const normGuess = normalize(guess);
-    const matches = DATA.filter((d) => normalize(d.player) === normGuess);
+    const matches = ALL_PLAYERS.filter((d) => normalize(d.player) === normGuess);
     if (matches.length === 0) {
       showMessage("Not a recognized player — pick one from the suggestions.", "info");
       return false;
@@ -479,9 +536,10 @@
       entry = matches.find((m) => m.year === Number(seasonVal));
     }
 
-    const correct = entry.player === answer.player && entry.year === answer.year;
+    const playerMatch = entry.player === answer.player;
+    const correct = playerMatch && entry.year === answer.year;
     const cells = buildCells(entry);
-    state.guesses.push({ name: entry.player, correct, cells });
+    state.guesses.push({ name: entry.player, correct, playerMatch, cells });
     saveState();
     renderGuessGrid();
     resetSeasonPicker();
@@ -523,6 +581,7 @@
       const s = loadStats(statType);
       lines.push(`Streak: ${s.currentStreak} 🔥`);
     }
+    lines.push(GAME_URL);
     return lines.join("\n");
   }
 
@@ -616,7 +675,6 @@
   }
 
   // ---------- wire up ----------
-  populateDatalist();
   await activateRound(dailyMeta.hitter, "daily");
 
   els.guessForm.addEventListener("submit", (e) => {
@@ -624,10 +682,36 @@
     if (submitGuess(els.guessInput.value)) {
       els.guessInput.value = "";
       resetSeasonPicker();
+      hideAutocomplete();
     }
   });
 
-  els.guessInput.addEventListener("input", updateSeasonPicker);
+  els.guessInput.addEventListener("input", () => {
+    updateSeasonPicker();
+    renderAutocomplete();
+  });
+
+  els.guessInput.addEventListener("focus", renderAutocomplete);
+
+  els.guessInput.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") hideAutocomplete();
+  });
+
+  els.autocompleteList.addEventListener("mousedown", (e) => {
+    // mousedown (not click) so this fires before the input's blur handler
+    const li = e.target.closest("li");
+    if (!li) return;
+    e.preventDefault();
+    els.guessInput.value = li.textContent;
+    hideAutocomplete();
+    updateSeasonPicker();
+    els.guessInput.focus();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target === els.guessInput || els.autocompleteList.contains(e.target)) return;
+    hideAutocomplete();
+  });
 
   els.shareBtn.addEventListener("click", () => {
     const text = buildShareText();
@@ -737,12 +821,14 @@
   });
 
   els.modeRandom.addEventListener("click", () => {
+    if (roundMode === "random") return;
     if (!isDailyDone(statType)) return;
     activateRound(randomPuzzle(statType, dailyMeta[statType].index), "random");
   });
 
   els.newRoundBtn.addEventListener("click", () => {
     if (!isDailyDone(statType)) return;
+    if (!window.confirm("Generate a new random player? Your current practice round will be replaced.")) return;
     activateRound(randomPuzzle(statType, dailyMeta[statType].index), "random");
   });
 })();

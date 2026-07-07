@@ -216,9 +216,14 @@ body {
   gap: 8px;
 }
 
-#guess-input {
+.guess-input-wrap {
+  position: relative;
   flex: 1;
   min-width: 140px;
+}
+
+#guess-input {
+  width: 100%;
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -229,6 +234,36 @@ body {
 
 #guess-input:focus {
   outline: 2px solid var(--accent);
+}
+
+.autocomplete-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.autocomplete-list li {
+  padding: 9px 10px;
+  border-radius: 7px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.autocomplete-list li:hover,
+.autocomplete-list li:active {
+  background: var(--accent);
+  color: white;
 }
 
 .season-select {
@@ -458,6 +493,12 @@ button {
   font-weight: 600;
   color: var(--text);
   max-width: 52px;
+}
+
+.guess-grid tbody td.player-name.player-match {
+  background: rgba(22, 163, 74, 0.28);
+  color: #4ade80;
+  font-weight: 800;
 }
 
 @media (min-width: 420px) {
