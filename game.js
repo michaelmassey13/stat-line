@@ -500,12 +500,7 @@
     }
     els.seasonSelect.innerHTML =
       `<option value="">Season…</option>` +
-      seasons
-        .map((e) => {
-          const label = e.rank != null ? `${e.award === "Cy Young" ? "CY" : "MVP"} #${e.rank}` : "unranked";
-          return `<option value="${e.year}">${e.year} (${label})</option>`;
-        })
-        .join("");
+      seasons.map((e) => `<option value="${e.year}">${e.year}</option>`).join("");
     els.seasonSelect.hidden = false;
     els.seasonHint.hidden = false;
   }
