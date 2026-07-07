@@ -49,15 +49,21 @@ body {
   padding: 0 32px;
 }
 
-.icon-btn {
+.header-icons {
   position: absolute;
   top: 0;
   right: 0;
+  display: flex;
+  gap: 4px;
+}
+
+.icon-btn {
   background: transparent;
   border: none;
   font-size: 22px;
   cursor: pointer;
   color: var(--text);
+  padding: 2px 4px;
 }
 
 .mode-toggle {
@@ -166,11 +172,13 @@ body {
 
 #guess-form {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 #guess-input {
   flex: 1;
+  min-width: 140px;
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -181,6 +189,23 @@ body {
 
 #guess-input:focus {
   outline: 2px solid var(--accent);
+}
+
+.season-select {
+  flex: 1;
+  flex-basis: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: #0e1626;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.season-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--accent);
 }
 
 button {
@@ -232,6 +257,94 @@ button {
   width: 100%;
   background: var(--green);
   color: white;
+}
+
+.share-preview {
+  background: #0e1626;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 16px 0;
+}
+
+.share-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.share-action-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: var(--accent);
+  color: white;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+#share-copy-btn {
+  background: var(--green);
+}
+
+.feedback-intro {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 12px 0 16px;
+}
+
+#feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feedback-message,
+.feedback-contact {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0e1626;
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.feedback-message:focus,
+.feedback-contact:focus {
+  outline: 2px solid var(--accent);
+}
+
+.feedback-submit {
+  background: var(--accent);
+  color: white;
+}
+
+.feedback-submit:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+
+.feedback-status {
+  margin-top: 10px;
+  font-size: 13px;
+  min-height: 18px;
+  color: var(--muted);
+}
+
+.feedback-status.success {
+  color: #4ade80;
+}
+
+.feedback-status.fail {
+  color: #f87171;
 }
 
 .legend {

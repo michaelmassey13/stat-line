@@ -4,14 +4,17 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Stat Line — Daily MLB Guessing Game</title>
-<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
   <div class="app">
     <header class="app-header">
       <h1>⚾ Stat Line</h1>
       <p class="subtitle">Guess the player behind the season — every stat line belongs to a top-10 MVP or Cy Young finisher.</p>
-      <button id="stats-btn" class="icon-btn" title="Stats">📊</button>
+      <div class="header-icons">
+        <button id="feedback-btn" class="icon-btn" title="Feedback">💬</button>
+        <button id="stats-btn" class="icon-btn" title="Stats">📊</button>
+      </div>
     </header>
 
     <div class="mode-toggle" role="tablist" aria-label="Stat type">
@@ -46,8 +49,12 @@
             required
           />
           <datalist id="player-list"></datalist>
+          <select id="season-select" class="season-select" hidden></select>
           <button type="submit">Guess</button>
         </form>
+        <div id="season-hint" class="season-hint" hidden>
+          This player has multiple qualifying seasons — pick one above.
+        </div>
         <div id="guesses-left" class="guesses-left"></div>
         <div id="message" class="message"></div>
         <button id="share-btn" class="share-btn" hidden>Share Result</button>
@@ -67,12 +74,12 @@
               <tr>
                 <th>Player</th>
                 <th>Year</th>
-                <th>Debut</th>
                 <th>Lg</th>
                 <th>Div</th>
                 <th>Team</th>
                 <th>Pos</th>
                 <th>Award</th>
+                <th>Debut</th>
               </tr>
             </thead>
             <tbody id="guess-grid-body"></tbody>
@@ -93,7 +100,41 @@
     </div>
   </div>
 
-  <script src="data.js"></script>
-  <script src="game.js"></script>
+  <div id="share-modal" class="modal" hidden>
+    <div class="modal-content">
+      <button id="close-share-modal" class="close-btn">&times;</button>
+      <h2>Share Result</h2>
+      <pre id="share-preview" class="share-preview"></pre>
+      <div class="share-actions">
+        <button id="share-native-btn" class="share-action-btn" hidden>📤 Share…</button>
+        <button id="share-copy-btn" class="share-action-btn">📋 Copy to Clipboard</button>
+        <a id="share-sms-btn" class="share-action-btn" href="#">💬 Text Message</a>
+        <a id="share-email-btn" class="share-action-btn" href="#">✉️ Email</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="feedback-modal" class="modal" hidden>
+    <div class="modal-content">
+      <button id="close-feedback-modal" class="close-btn">&times;</button>
+      <h2>Feedback</h2>
+      <p class="feedback-intro">Found a bug, have a stat you'd like to see, or an idea for the game? Let me know.</p>
+      <form id="feedback-form">
+        <textarea
+          id="feedback-message"
+          class="feedback-message"
+          rows="5"
+          placeholder="What's on your mind?"
+          required
+        ></textarea>
+        <input id="feedback-contact" class="feedback-contact" type="text" placeholder="Name or email (optional)" />
+        <button type="submit" class="feedback-submit">Send Feedback</button>
+      </form>
+      <div id="feedback-status" class="feedback-status"></div>
+    </div>
+  </div>
+
+  <script src="data.js?v=4"></script>
+  <script src="game.js?v=4"></script>
 </body>
 </html>

@@ -4,6 +4,9 @@
   const MAX_GUESSES = 6;
   const EPOCH = new Date(2024, 0, 1); // day 0
   const STORAGE_PREFIX = "statline_";
+  // Set this to your Formspree endpoint (e.g. "https://formspree.io/f/xxxxxxx")
+  // to wire up the feedback form; left blank it falls back to a mailto: link.
+  const FEEDBACK_ENDPOINT = "";
 
   function mulberry32(seed) {
     return function () {
@@ -72,6 +75,15 @@
     hitter: puzzleForDate(today, "hitter"),
     pitcher: puzzleForDate(today, "pitcher"),
   };
+
+  // normalized player name -> all of that player's qualifying seasons, sorted
+  const PLAYER_SEASONS = new Map();
+  DATA.forEach((d) => {
+    const key = normalize(d.player);
+    if (!PLAYER_SEASONS.has(key)) PLAYER_SEASONS.set(key, []);
+    PLAYER_SEASONS.get(key).push(d);
+  });
+  PLAYER_SEASONS.forEach((entries) => entries.sort((a, b) => a.year - b.year));
 
   // ---------- round state (mutable across mode/type switches) ----------
   let roundMode = "daily"; // "daily" | "random"
@@ -188,6 +200,8 @@
     guessForm: document.getElementById("guess-form"),
     guessInput: document.getElementById("guess-input"),
     playerList: document.getElementById("player-list"),
+    seasonSelect: document.getElementById("season-select"),
+    seasonHint: document.getElementById("season-hint"),
     guessGridBody: document.getElementById("guess-grid-body"),
     message: document.getElementById("message"),
     guessesLeft: document.getElementById("guesses-left"),
@@ -202,6 +216,20 @@
     statsBodyHitter: document.getElementById("stats-body-hitter"),
     statsBodyPitcher: document.getElementById("stats-body-pitcher"),
     closeModal: document.getElementById("close-modal"),
+    shareModal: document.getElementById("share-modal"),
+    sharePreview: document.getElementById("share-preview"),
+    shareNativeBtn: document.getElementById("share-native-btn"),
+    shareCopyBtn: document.getElementById("share-copy-btn"),
+    shareSmsBtn: document.getElementById("share-sms-btn"),
+    shareEmailBtn: document.getElementById("share-email-btn"),
+    closeShareModal: document.getElementById("close-share-modal"),
+    feedbackBtn: document.getElementById("feedback-btn"),
+    feedbackModal: document.getElementById("feedback-modal"),
+    feedbackForm: document.getElementById("feedback-form"),
+    feedbackMessage: document.getElementById("feedback-message"),
+    feedbackContact: document.getElementById("feedback-contact"),
+    feedbackStatus: document.getElementById("feedback-status"),
+    closeFeedbackModal: document.getElementById("close-feedback-modal"),
   };
 
   function uniquePlayerNames() {
@@ -338,12 +366,12 @@
         (g) => `<tr>
           <td class="player-name">${g.name}</td>
           ${cellHtml(g.cells.year)}
-          ${cellHtml(g.cells.debut)}
           ${cellHtml(g.cells.league)}
           ${cellHtml(g.cells.division)}
           ${cellHtml(g.cells.team)}
           ${cellHtml(g.cells.position)}
           ${cellHtml(g.cells.award)}
+          ${cellHtml(g.cells.debut)}
         </tr>`
       )
       .join("");
@@ -384,41 +412,76 @@
     renderGuessesLeft();
   }
 
+  function resetSeasonPicker() {
+    els.seasonSelect.innerHTML = "";
+    els.seasonSelect.hidden = true;
+    els.seasonHint.hidden = true;
+  }
+
+  // shows/populates the season dropdown whenever the typed name matches a
+  // player with more than one qualifying season, since the stat line could
+  // be any one of them
+  function updateSeasonPicker() {
+    const seasons = PLAYER_SEASONS.get(normalize(els.guessInput.value.trim()));
+    if (!seasons || seasons.length <= 1) {
+      resetSeasonPicker();
+      return;
+    }
+    els.seasonSelect.innerHTML =
+      `<option value="">Season…</option>` +
+      seasons
+        .map((e) => `<option value="${e.year}">${e.year} (${e.award === "Cy Young" ? "CY" : "MVP"})</option>`)
+        .join("");
+    els.seasonSelect.hidden = false;
+    els.seasonHint.hidden = false;
+  }
+
+  // returns true if a guess was actually consumed, false if the guess was
+  // rejected/blocked (unrecognized player, or a season still needs picking)
   function submitGuess(raw) {
-    if (state.over) return;
+    if (state.over) return false;
     const guess = raw.trim();
-    if (!guess) return;
+    if (!guess) return false;
 
     const normGuess = normalize(guess);
     const matches = DATA.filter((d) => normalize(d.player) === normGuess);
     if (matches.length === 0) {
       showMessage("Not a recognized player — pick one from the suggestions.", "info");
-      return;
+      return false;
     }
 
-    // compare against whichever of that player's seasons is closest to the
-    // answer's year (the most favorable, most informative comparison)
-    const entry = matches.reduce((best, e) =>
-      Math.abs(e.year - answer.year) < Math.abs(best.year - answer.year) ? e : best
-    );
-    const correct = normGuess === normalize(answer.player);
+    let entry;
+    if (matches.length === 1) {
+      entry = matches[0];
+    } else {
+      const seasonVal = els.seasonSelect.value;
+      if (!seasonVal) {
+        showMessage("This player has multiple qualifying seasons — pick one from the Season dropdown.", "info");
+        return false;
+      }
+      entry = matches.find((m) => m.year === Number(seasonVal));
+    }
+
+    const correct = entry.player === answer.player && entry.year === answer.year;
     const cells = buildCells(entry);
     state.guesses.push({ name: entry.player, correct, cells });
     saveState();
     renderGuessGrid();
+    resetSeasonPicker();
 
     if (correct) {
       endGame(true);
-      return;
+      return true;
     }
 
     if (state.guesses.length >= MAX_GUESSES) {
       endGame(false);
-      return;
+      return true;
     }
 
     renderGuessesLeft();
     showMessage("Not quite — check the grid for clues.", "info");
+    return true;
   }
 
   function statusEmoji(status) {
@@ -427,7 +490,7 @@
 
   function buildShareText() {
     const rows = state.guesses.map((g) =>
-      ["year", "debut", "league", "division", "team", "position", "award"]
+      ["year", "league", "division", "team", "position", "award", "debut"]
         .map((k) => statusEmoji(g.cells[k].status))
         .join("")
     );
@@ -480,6 +543,7 @@
     els.guessForm.querySelector("button").disabled = false;
     els.guessInput.value = "";
     els.shareBtn.hidden = true;
+    resetSeasonPicker();
     showMessage("", "");
 
     if (state.over) {
@@ -538,17 +602,92 @@
 
   els.guessForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    submitGuess(els.guessInput.value);
-    els.guessInput.value = "";
+    if (submitGuess(els.guessInput.value)) {
+      els.guessInput.value = "";
+      resetSeasonPicker();
+    }
   });
 
-  els.shareBtn.addEventListener("click", async () => {
+  els.guessInput.addEventListener("input", updateSeasonPicker);
+
+  els.shareBtn.addEventListener("click", () => {
     const text = buildShareText();
+    els.sharePreview.textContent = text;
+    const encoded = encodeURIComponent(text);
+    els.shareSmsBtn.href = `sms:&body=${encoded}`;
+    els.shareEmailBtn.href = `mailto:?subject=${encodeURIComponent("Can you beat my Stat Line score?")}&body=${encoded}`;
+    els.shareNativeBtn.hidden = typeof navigator.share !== "function";
+    els.shareModal.hidden = false;
+  });
+
+  els.shareNativeBtn.addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(text);
-      showMessage("Result copied to clipboard!", "success");
+      await navigator.share({ text: els.sharePreview.textContent });
     } catch (e) {
-      showMessage(text, "success");
+      // user cancelled the native share sheet — nothing to do
+    }
+  });
+
+  els.shareCopyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(els.sharePreview.textContent);
+      els.shareCopyBtn.textContent = "✅ Copied!";
+    } catch (e) {
+      els.shareCopyBtn.textContent = "Select the text above to copy";
+    }
+    setTimeout(() => {
+      els.shareCopyBtn.textContent = "📋 Copy to Clipboard";
+    }, 2000);
+  });
+
+  els.closeShareModal.addEventListener("click", () => {
+    els.shareModal.hidden = true;
+  });
+
+  els.feedbackBtn.addEventListener("click", () => {
+    els.feedbackStatus.textContent = "";
+    els.feedbackStatus.className = "feedback-status";
+    els.feedbackModal.hidden = false;
+  });
+
+  els.closeFeedbackModal.addEventListener("click", () => {
+    els.feedbackModal.hidden = true;
+  });
+
+  els.feedbackForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const message = els.feedbackMessage.value.trim();
+    if (!message) return;
+    const contact = els.feedbackContact.value.trim();
+
+    if (!FEEDBACK_ENDPOINT) {
+      const body = `${message}${contact ? `\n\nFrom: ${contact}` : ""}`;
+      window.location.href = `mailto:michaelmassey13@gmail.com?subject=${encodeURIComponent(
+        "Stat Line feedback"
+      )}&body=${encodeURIComponent(body)}`;
+      return;
+    }
+
+    const submitBtn = els.feedbackForm.querySelector("button");
+    submitBtn.disabled = true;
+    els.feedbackStatus.textContent = "Sending…";
+    els.feedbackStatus.className = "feedback-status";
+    try {
+      const res = await fetch(FEEDBACK_ENDPOINT, {
+        method: "POST",
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({ message, contact }),
+      });
+      if (!res.ok) throw new Error(`Form submission failed (${res.status})`);
+      els.feedbackMessage.value = "";
+      els.feedbackContact.value = "";
+      els.feedbackStatus.textContent = "Thanks — feedback sent!";
+      els.feedbackStatus.className = "feedback-status success";
+    } catch (err) {
+      els.feedbackStatus.textContent = "Couldn't send that — try again in a moment.";
+      els.feedbackStatus.className = "feedback-status fail";
+    } finally {
+      submitBtn.disabled = false;
     }
   });
 
