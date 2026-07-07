@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stat Line — Daily MLB Guessing Game</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>⚾ Stat Line</h1>
+      <p class="subtitle">Guess the player behind the season — every stat line belongs to a top-10 MVP or Cy Young finisher.</p>
+      <button id="stats-btn" class="icon-btn" title="Stats">📊</button>
+    </header>
+
+    <div class="mode-toggle" role="tablist" aria-label="Stat type">
+      <button id="type-hitter" class="mode-btn active" role="tab" aria-selected="true">Hitter</button>
+      <button id="type-pitcher" class="mode-btn" role="tab" aria-selected="false">Pitcher</button>
+    </div>
+
+    <div class="mode-toggle" role="tablist" aria-label="Game mode">
+      <button id="mode-daily" class="mode-btn active" role="tab" aria-selected="true">Daily</button>
+      <button id="mode-random" class="mode-btn" role="tab" aria-selected="false">Random</button>
+    </div>
+
+    <main>
+      <section class="card">
+        <div class="stat-card-top">
+          <h2 id="stat-header">Stat Line</h2>
+          <span id="puzzle-label" class="puzzle-label"></span>
+        </div>
+        <div class="grid-wrap">
+          <table id="stat-table"></table>
+        </div>
+        <div id="stat-source" class="stat-source"></div>
+      </section>
+
+      <section class="card">
+        <form id="guess-form" autocomplete="off">
+          <input
+            id="guess-input"
+            type="text"
+            list="player-list"
+            placeholder="Type a player name..."
+            required
+          />
+          <datalist id="player-list"></datalist>
+          <button type="submit">Guess</button>
+        </form>
+        <div id="guesses-left" class="guesses-left"></div>
+        <div id="message" class="message"></div>
+        <button id="share-btn" class="share-btn" hidden>Share Result</button>
+        <button id="new-round-btn" class="new-round-btn" hidden>🎲 New Random Player</button>
+      </section>
+
+      <section class="card">
+        <h3>Guesses</h3>
+        <div class="legend">
+          <span><i class="swatch green"></i> Exact match</span>
+          <span><i class="swatch yellow"></i> Close</span>
+          <span><i class="swatch gray"></i> No match</span>
+        </div>
+        <div class="grid-wrap">
+          <table id="guess-grid" class="guess-grid">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Year</th>
+                <th>Lg</th>
+                <th>Div</th>
+                <th>Team</th>
+                <th>Pos</th>
+                <th>Award</th>
+              </tr>
+            </thead>
+            <tbody id="guess-grid-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="stats-modal" class="modal" hidden>
+    <div class="modal-content">
+      <button id="close-modal" class="close-btn">&times;</button>
+      <h2>Statistics</h2>
+      <h3>Hitter</h3>
+      <div id="stats-body-hitter"></div>
+      <h3>Pitcher</h3>
+      <div id="stats-body-pitcher"></div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

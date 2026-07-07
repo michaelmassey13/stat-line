@@ -1,0 +1,399 @@
+:root {
+  --bg: #0b1220;
+  --card: #131c2e;
+  --border: #22304a;
+  --text: #e8edf6;
+  --muted: #8a97ab;
+  --accent: #3b82f6;
+  --green: #16a34a;
+  --yellow: #ca8a04;
+  --gray-cell: #334155;
+  --red: #dc2626;
+  --radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.app-header {
+  position: relative;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.app-header h1 {
+  margin: 0 0 4px;
+  font-size: 28px;
+  letter-spacing: 0.5px;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 0 32px;
+}
+
+.icon-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 16px;
+}
+
+.mode-btn {
+  flex: 1;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  color: white;
+}
+
+.stat-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.stat-card-top h2 {
+  margin: 0 0 12px;
+}
+
+.puzzle-label {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  margin-bottom: 12px;
+}
+
+.new-round-btn {
+  margin-top: 12px;
+  width: 100%;
+  background: var(--accent);
+  color: white;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card h2,
+.card h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#stat-table {
+  width: 100%;
+  table-layout: auto;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+#stat-table th {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  padding-bottom: 4px;
+  white-space: nowrap;
+}
+
+#stat-table td {
+  font-size: 14px;
+  font-weight: 700;
+  padding: 2px 1px;
+  white-space: nowrap;
+}
+
+@media (min-width: 420px) {
+  #stat-table th {
+    font-size: 11px;
+  }
+  #stat-table td {
+    font-size: 17px;
+  }
+}
+
+.stat-source {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+}
+
+#guess-form {
+  display: flex;
+  gap: 8px;
+}
+
+#guess-input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0e1626;
+  color: var(--text);
+  font-size: 16px;
+}
+
+#guess-input:focus {
+  outline: 2px solid var(--accent);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+#guess-form button {
+  background: var(--accent);
+  color: white;
+}
+
+#guess-form button:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: default;
+}
+
+.guesses-left {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.message {
+  margin-top: 10px;
+  font-size: 14px;
+  min-height: 20px;
+}
+
+.message.success {
+  color: #4ade80;
+}
+
+.message.fail {
+  color: #f87171;
+}
+
+.message.info {
+  color: var(--muted);
+}
+
+.share-btn {
+  margin-top: 12px;
+  width: 100%;
+  background: var(--green);
+  color: white;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.swatch.green {
+  background: var(--green);
+}
+
+.swatch.yellow {
+  background: var(--yellow);
+}
+
+.swatch.gray {
+  background: var(--gray-cell);
+}
+
+.grid-wrap {
+  overflow-x: auto;
+}
+
+.guess-grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+  text-align: center;
+}
+
+.guess-grid thead th {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 0 4px 4px;
+}
+
+.guess-grid tbody td {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 4px;
+  white-space: nowrap;
+}
+
+.guess-grid tbody td.player-name {
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: normal;
+  color: var(--text);
+}
+
+.guess-grid tbody tr td:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.guess-grid tbody tr td:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.cell {
+  color: #e8edf6;
+}
+
+.cell.green {
+  background: var(--green);
+  color: #04220f;
+}
+
+.cell.yellow {
+  background: var(--yellow);
+  color: #241a02;
+}
+
+.cell.gray {
+  background: var(--gray-cell);
+  color: #cbd5e1;
+}
+
+.cell .arrow {
+  margin-left: 3px;
+  font-weight: 900;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+.modal-content {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  position: relative;
+}
+
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  color: var(--text);
+  font-size: 20px;
+}
+
+.modal-content h3 {
+  margin: 20px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modal-content h3:first-of-type {
+  margin-top: 16px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  text-align: center;
+  margin-top: 12px;
+}
+
+.stat-num {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
