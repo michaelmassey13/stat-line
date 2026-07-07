@@ -82,14 +82,28 @@
     pitcher: puzzleForDate(today, "pitcher"),
   };
 
-  // normalized player name -> all of that player's qualifying seasons, sorted
-  const PLAYER_SEASONS = new Map();
+  // normalized player name -> Map(bbrefId -> that person's qualifying
+  // seasons, sorted). Some names belong to more than one real player (e.g.
+  // two different "Will Smith"s) -- each bbrefId is a distinct person.
+  const PLAYER_IDENTITIES = new Map();
   ALL_PLAYERS.forEach((d) => {
     const key = normalize(d.player);
-    if (!PLAYER_SEASONS.has(key)) PLAYER_SEASONS.set(key, []);
-    PLAYER_SEASONS.get(key).push(d);
+    if (!PLAYER_IDENTITIES.has(key)) PLAYER_IDENTITIES.set(key, new Map());
+    const byBbref = PLAYER_IDENTITIES.get(key);
+    if (!byBbref.has(d.bbrefId)) byBbref.set(d.bbrefId, []);
+    byBbref.get(d.bbrefId).push(d);
   });
-  PLAYER_SEASONS.forEach((entries) => entries.sort((a, b) => a.year - b.year));
+  PLAYER_IDENTITIES.forEach((byBbref) => {
+    byBbref.forEach((entries) => entries.sort((a, b) => a.year - b.year));
+  });
+
+  // "2016-present" or "2012-2020", used to tell same-named players apart
+  function identitySpan(entries) {
+    const debut = entries[0].debutYear;
+    if (entries[0].active) return debut != null ? `${debut}-present` : "present";
+    const lastYear = Math.max(...entries.map((e) => e.year));
+    return debut != null ? `${debut}-${lastYear}` : `through ${lastYear}`;
+  }
 
   // ---------- round state (mutable across mode/type switches) ----------
   let roundMode = "daily"; // "daily" | "random"
@@ -99,6 +113,9 @@
   let saveKey = dailySaveKey(statType);
   let statsSource = "offline";
   let state = { guesses: [], over: false, won: false };
+  // set when a specific same-named player is picked from the autocomplete
+  // dropdown; cleared whenever the input is edited by hand
+  let selectedBbrefId = null;
 
   function dailySaveKey(type) {
     return `${STORAGE_PREFIX}${type}_${todayKey(today)}`;
@@ -214,6 +231,7 @@
     autocompleteList: document.getElementById("autocomplete-list"),
     seasonSelect: document.getElementById("season-select"),
     seasonHint: document.getElementById("season-hint"),
+    identityHint: document.getElementById("identity-hint"),
     guessGridBody: document.getElementById("guess-grid-body"),
     message: document.getElementById("message"),
     guessesLeft: document.getElementById("guesses-left"),
@@ -265,13 +283,26 @@
   }
 
   function renderAutocomplete() {
-    const matches = suggestionsFor(els.guessInput.value);
-    if (matches.length === 0) {
-      els.autocompleteList.hidden = true;
-      els.autocompleteList.innerHTML = "";
+    const names = suggestionsFor(els.guessInput.value);
+    if (names.length === 0) {
+      hideAutocomplete();
       return;
     }
-    els.autocompleteList.innerHTML = matches.map((n) => `<li>${n}</li>`).join("");
+    const rows = [];
+    for (const name of names) {
+      const identities = PLAYER_IDENTITIES.get(normalize(name));
+      if (!identities || identities.size <= 1) {
+        rows.push(`<li data-name="${name}">${name}</li>`);
+        continue;
+      }
+      // multiple real players share this name -- list each one separately,
+      // labeled with their career span, so it's clear who you're picking
+      for (const entries of identities.values()) {
+        const bbrefId = entries[0].bbrefId;
+        rows.push(`<li data-name="${name}" data-bbref="${bbrefId}">${name} (${identitySpan(entries)})</li>`);
+      }
+    }
+    els.autocompleteList.innerHTML = rows.join("");
     els.autocompleteList.hidden = false;
   }
 
@@ -487,57 +518,97 @@
     els.seasonSelect.innerHTML = "";
     els.seasonSelect.hidden = true;
     els.seasonHint.hidden = true;
+    els.identityHint.hidden = true;
   }
 
-  // shows/populates the season dropdown whenever the typed name matches a
-  // player with more than one qualifying season, since the stat line could
-  // be any one of them
+  // resolves the current input text (plus any disambiguated selectedBbrefId)
+  // down to a specific person's season list, or null if the name is
+  // unrecognized or still ambiguous between two same-named players
+  function resolveIdentity() {
+    const key = normalize(els.guessInput.value.trim());
+    const identities = PLAYER_IDENTITIES.get(key);
+    if (!identities) return null;
+    if (identities.size === 1) return identities.values().next().value;
+    if (selectedBbrefId && identities.has(selectedBbrefId)) return identities.get(selectedBbrefId);
+    return null;
+  }
+
+  // shows/populates the season dropdown whenever the resolved player has
+  // more than one qualifying season, since the stat line could be any of them
   function updateSeasonPicker() {
-    const seasons = PLAYER_SEASONS.get(normalize(els.guessInput.value.trim()));
-    if (!seasons || seasons.length <= 1) {
-      resetSeasonPicker();
+    const key = normalize(els.guessInput.value.trim());
+    const identities = PLAYER_IDENTITIES.get(key);
+    const entries = resolveIdentity();
+
+    // once a same-named player has been disambiguated, keep a visible
+    // confirmation of who's selected since the input box itself just shows
+    // the plain name
+    if (identities && identities.size > 1 && entries) {
+      els.identityHint.textContent = `Selected: ${entries[0].player} (${identitySpan(entries)})`;
+      els.identityHint.hidden = false;
+    } else {
+      els.identityHint.hidden = true;
+    }
+
+    if (!entries || entries.length <= 1) {
+      els.seasonSelect.innerHTML = "";
+      els.seasonSelect.hidden = true;
+      els.seasonHint.hidden = true;
       return;
     }
     els.seasonSelect.innerHTML =
       `<option value="">Season…</option>` +
-      seasons.map((e) => `<option value="${e.year}">${e.year}</option>`).join("");
+      entries.map((e) => `<option value="${e.year}">${e.year}</option>`).join("");
     els.seasonSelect.hidden = false;
     els.seasonHint.hidden = false;
   }
 
   // returns true if a guess was actually consumed, false if the guess was
-  // rejected/blocked (unrecognized player, or a season still needs picking)
+  // rejected/blocked (unrecognized player, still-ambiguous name, or a
+  // season still needs picking)
   function submitGuess(raw) {
     if (state.over) return false;
     const guess = raw.trim();
     if (!guess) return false;
 
-    const normGuess = normalize(guess);
-    const matches = ALL_PLAYERS.filter((d) => normalize(d.player) === normGuess);
-    if (matches.length === 0) {
+    const key = normalize(guess);
+    const identities = PLAYER_IDENTITIES.get(key);
+    if (!identities) {
       showMessage("Not a recognized player — pick one from the suggestions.", "info");
       return false;
     }
 
+    let entries;
+    if (identities.size > 1) {
+      if (!selectedBbrefId || !identities.has(selectedBbrefId)) {
+        showMessage("Multiple players share this name — pick one from the suggestions above.", "info");
+        return false;
+      }
+      entries = identities.get(selectedBbrefId);
+    } else {
+      entries = identities.values().next().value;
+    }
+
     let entry;
-    if (matches.length === 1) {
-      entry = matches[0];
+    if (entries.length === 1) {
+      entry = entries[0];
     } else {
       const seasonVal = els.seasonSelect.value;
       if (!seasonVal) {
         showMessage("This player has multiple qualifying seasons — pick one from the Season dropdown.", "info");
         return false;
       }
-      entry = matches.find((m) => m.year === Number(seasonVal));
+      entry = entries.find((m) => m.year === Number(seasonVal));
     }
 
-    const playerMatch = entry.player === answer.player;
+    const playerMatch = entry.bbrefId === answer.bbrefId;
     const correct = playerMatch && entry.year === answer.year;
     const cells = buildCells(entry);
     state.guesses.push({ name: entry.player, correct, playerMatch, cells });
     saveState();
     renderGuessGrid();
     resetSeasonPicker();
+    selectedBbrefId = null;
 
     if (correct) {
       endGame(true);
@@ -614,6 +685,7 @@
     els.guessForm.querySelector("button").disabled = false;
     els.guessInput.value = "";
     els.shareBtn.hidden = true;
+    selectedBbrefId = null;
     resetSeasonPicker();
     showMessage("", "");
 
@@ -682,6 +754,9 @@
   });
 
   els.guessInput.addEventListener("input", () => {
+    // free-typing invalidates any previously disambiguated same-named
+    // player -- they'll need to re-pick from the suggestions if it's ambiguous
+    selectedBbrefId = null;
     updateSeasonPicker();
     renderAutocomplete();
   });
@@ -697,7 +772,8 @@
     const li = e.target.closest("li");
     if (!li) return;
     e.preventDefault();
-    els.guessInput.value = li.textContent;
+    els.guessInput.value = li.dataset.name;
+    selectedBbrefId = li.dataset.bbref || null;
     hideAutocomplete();
     updateSeasonPicker();
     els.guessInput.focus();
