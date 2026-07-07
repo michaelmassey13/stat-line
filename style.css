@@ -281,25 +281,42 @@ button {
 
 .guess-grid thead th {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 9px;
   text-transform: uppercase;
   font-weight: 600;
-  padding: 0 4px 4px;
+  padding: 0 2px 4px;
 }
 
 .guess-grid tbody td {
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 10px 4px;
-  white-space: nowrap;
+  padding: 6px 1px;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.15;
 }
 
 .guess-grid tbody td.player-name {
   text-align: left;
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
-  white-space: normal;
   color: var(--text);
+  max-width: 52px;
+}
+
+@media (min-width: 420px) {
+  .guess-grid thead th {
+    font-size: 11px;
+  }
+  .guess-grid tbody td {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .guess-grid tbody td.player-name {
+    font-size: 14px;
+    white-space: normal;
+    max-width: none;
+  }
 }
 
 .guess-grid tbody tr td:first-child {

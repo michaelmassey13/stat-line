@@ -308,10 +308,12 @@
 
   function buildCells(entry) {
     const year = compareClose(entry.year, answer.year, 3);
+    const debut = compareClose(entry.debutYear, answer.debutYear, 3);
     const rank = compareRank(entry.rank, answer.rank, 3);
     const awardLabel = entry.award === "Cy Young" ? "CY" : "MVP";
     return {
       year: { status: year.status, text: `${entry.year}${year.arrow ? " " + year.arrow : ""}` },
+      debut: { status: debut.status, text: `${entry.debutYear}${debut.arrow ? " " + debut.arrow : ""}` },
       league: { status: compareExact(entry.league, answer.league), text: entry.league },
       division: {
         status: compareDivision(entry.division, answer.division),
@@ -336,6 +338,7 @@
         (g) => `<tr>
           <td class="player-name">${g.name}</td>
           ${cellHtml(g.cells.year)}
+          ${cellHtml(g.cells.debut)}
           ${cellHtml(g.cells.league)}
           ${cellHtml(g.cells.division)}
           ${cellHtml(g.cells.team)}
@@ -424,7 +427,7 @@
 
   function buildShareText() {
     const rows = state.guesses.map((g) =>
-      ["year", "league", "division", "team", "position", "award"]
+      ["year", "debut", "league", "division", "team", "position", "award"]
         .map((k) => statusEmoji(g.cells[k].status))
         .join("")
     );
