@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Stat Line — Daily MLB Guessing Game</title>
-<link rel="stylesheet" href="style.css?v=4" />
+<link rel="stylesheet" href="style.css?v=6" />
 </head>
 <body>
   <div class="app">
@@ -24,8 +24,9 @@
 
     <div class="mode-toggle" role="tablist" aria-label="Game mode">
       <button id="mode-daily" class="mode-btn active" role="tab" aria-selected="true">Daily</button>
-      <button id="mode-random" class="mode-btn" role="tab" aria-selected="false">Random</button>
+      <button id="mode-random" class="mode-btn" role="tab" aria-selected="false" disabled>🔒 Random</button>
     </div>
+    <div id="random-lock-hint" class="random-lock-hint"></div>
 
     <main>
       <section class="card">
@@ -134,7 +135,7 @@
     </div>
   </div>
 
-  <script src="data.js?v=4"></script>
-  <script src="game.js?v=4"></script>
+  <script src="data.js?v=6"></script>
+  <script src="game.js?v=6"></script>
 </body>
 </html>

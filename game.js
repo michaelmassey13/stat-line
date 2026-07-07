@@ -156,6 +156,12 @@
     return { guesses: [], over: false, won: false };
   }
 
+  // Random mode is locked behind finishing that stat type's daily puzzle —
+  // the daily game is the priority, random is just a bonus once it's done
+  function isDailyDone(type) {
+    return loadDailyState(type).over;
+  }
+
   function saveState() {
     if (roundMode !== "daily") return;
     localStorage.setItem(saveKey, JSON.stringify(state));
@@ -211,6 +217,7 @@
     typePitcher: document.getElementById("type-pitcher"),
     modeDaily: document.getElementById("mode-daily"),
     modeRandom: document.getElementById("mode-random"),
+    randomLockHint: document.getElementById("random-lock-hint"),
     statsBtn: document.getElementById("stats-btn"),
     statsModal: document.getElementById("stats-modal"),
     statsBodyHitter: document.getElementById("stats-body-hitter"),
@@ -395,6 +402,15 @@
     els.message.className = "message " + (type || "");
   }
 
+  function updateRandomLockUI() {
+    const dailyDone = isDailyDone(statType);
+    els.modeRandom.disabled = !dailyDone;
+    els.modeRandom.textContent = dailyDone ? "Random" : "🔒 Random";
+    els.randomLockHint.textContent = dailyDone
+      ? ""
+      : `Finish today's Daily ${statType === "hitter" ? "Hitter" : "Pitcher"} puzzle to unlock Random.`;
+  }
+
   function endGame(won) {
     if (state.over) return;
     state.over = true;
@@ -410,6 +426,7 @@
     els.guessForm.querySelector("button").disabled = true;
     els.shareBtn.hidden = false;
     renderGuessesLeft();
+    updateRandomLockUI();
   }
 
   function resetSeasonPicker() {
@@ -576,6 +593,8 @@
     els.modeRandom.setAttribute("aria-selected", roundMode === "random");
     els.newRoundBtn.hidden = roundMode !== "random";
 
+    updateRandomLockUI();
+
     els.statHeader.textContent = "Loading…";
     els.statTable.innerHTML = "";
     els.statSource.textContent = "";
@@ -700,16 +719,16 @@
     els.statsModal.hidden = true;
   });
 
+  // switching stat type always drops back to that type's Daily puzzle —
+  // the daily game is the priority every time, not whatever mode you were in
   els.typeHitter.addEventListener("click", () => {
-    if (statType === "hitter") return;
-    const meta = roundMode === "daily" ? dailyMeta.hitter : randomPuzzle("hitter", dailyMeta.hitter.index);
-    activateRound(meta, roundMode);
+    if (statType === "hitter" && roundMode === "daily") return;
+    activateRound(dailyMeta.hitter, "daily");
   });
 
   els.typePitcher.addEventListener("click", () => {
-    if (statType === "pitcher") return;
-    const meta = roundMode === "daily" ? dailyMeta.pitcher : randomPuzzle("pitcher", dailyMeta.pitcher.index);
-    activateRound(meta, roundMode);
+    if (statType === "pitcher" && roundMode === "daily") return;
+    activateRound(dailyMeta.pitcher, "daily");
   });
 
   els.modeDaily.addEventListener("click", () => {
@@ -718,10 +737,12 @@
   });
 
   els.modeRandom.addEventListener("click", () => {
+    if (!isDailyDone(statType)) return;
     activateRound(randomPuzzle(statType, dailyMeta[statType].index), "random");
   });
 
   els.newRoundBtn.addEventListener("click", () => {
+    if (!isDailyDone(statType)) return;
     activateRound(randomPuzzle(statType, dailyMeta[statType].index), "random");
   });
 })();
