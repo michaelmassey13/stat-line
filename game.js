@@ -85,17 +85,30 @@
   // normalized player name -> Map(bbrefId -> that person's qualifying
   // seasons, sorted). Some names belong to more than one real player (e.g.
   // two different "Will Smith"s) -- each bbrefId is a distinct person.
-  const PLAYER_IDENTITIES = new Map();
+  // Kept separate per stat type so two-way players (e.g. Shohei Ohtani)
+  // don't mix their hitting and pitching seasons into one identity.
+  const PLAYER_IDENTITIES_BY_TYPE = { hitter: new Map(), pitcher: new Map() };
   ALL_PLAYERS.forEach((d) => {
+    const identities = PLAYER_IDENTITIES_BY_TYPE[d.type];
+    if (!identities) return;
     const key = normalize(d.player);
-    if (!PLAYER_IDENTITIES.has(key)) PLAYER_IDENTITIES.set(key, new Map());
-    const byBbref = PLAYER_IDENTITIES.get(key);
+    if (!identities.has(key)) identities.set(key, new Map());
+    const byBbref = identities.get(key);
     if (!byBbref.has(d.bbrefId)) byBbref.set(d.bbrefId, []);
     byBbref.get(d.bbrefId).push(d);
   });
-  PLAYER_IDENTITIES.forEach((byBbref) => {
-    byBbref.forEach((entries) => entries.sort((a, b) => a.year - b.year));
+  Object.values(PLAYER_IDENTITIES_BY_TYPE).forEach((identities) => {
+    identities.forEach((byBbref) => {
+      byBbref.forEach((entries) => entries.sort((a, b) => a.year - b.year));
+    });
   });
+
+  // identity lookups always resolve against the stat type currently being
+  // played, since a two-way player's season list depends on which side of
+  // the game (hitter/pitcher) is active
+  function currentIdentities() {
+    return PLAYER_IDENTITIES_BY_TYPE[statType];
+  }
 
   // "2016-present" or "2012-2020", used to tell same-named players apart
   function identitySpan(entries) {
@@ -291,7 +304,7 @@
     }
     const rows = [];
     for (const name of names) {
-      const identities = PLAYER_IDENTITIES.get(normalize(name));
+      const identities = currentIdentities().get(normalize(name));
       if (!identities || identities.size <= 1) {
         rows.push(`<li data-name="${name}">${name}</li>`);
         continue;
@@ -528,7 +541,7 @@
   // unrecognized or still ambiguous between two same-named players
   function resolveIdentity() {
     const key = normalize(els.guessInput.value.trim());
-    const identities = PLAYER_IDENTITIES.get(key);
+    const identities = currentIdentities().get(key);
     if (!identities) return null;
     if (identities.size === 1) return identities.values().next().value;
     if (selectedBbrefId && identities.has(selectedBbrefId)) return identities.get(selectedBbrefId);
@@ -539,7 +552,7 @@
   // more than one qualifying season, since the stat line could be any of them
   function updateSeasonPicker() {
     const key = normalize(els.guessInput.value.trim());
-    const identities = PLAYER_IDENTITIES.get(key);
+    const identities = currentIdentities().get(key);
     const entries = resolveIdentity();
 
     // once a same-named player has been disambiguated, keep a visible
@@ -574,7 +587,7 @@
     if (!guess) return false;
 
     const key = normalize(guess);
-    const identities = PLAYER_IDENTITIES.get(key);
+    const identities = currentIdentities().get(key);
     if (!identities) {
       showMessage("Not a recognized player — pick one from the suggestions.", "info");
       return false;
