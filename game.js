@@ -148,6 +148,7 @@
         R: stat.runs,
         SB: stat.stolenBases,
         BB: stat.baseOnBalls,
+        SO: stat.strikeOuts,
         OPS: parseFloat(stat.ops),
       };
     }
@@ -327,6 +328,7 @@
         ["R", s.R],
         ["SB", s.SB],
         ["BB", s.BB],
+        ["SO", s.SO],
         ["OPS", s.OPS.toFixed(3).replace(/^0/, "")],
         ["WAR", s.WAR.toFixed(1)],
       ];
